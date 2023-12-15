@@ -1,0 +1,5 @@
+.idea
+.env
+db.sqlite3
+mysite/__pycache__
+order/__pycache__

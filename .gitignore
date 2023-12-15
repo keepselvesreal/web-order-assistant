@@ -1,5 +1,6 @@
 .idea
 .env
 db.sqlite3
-mysite/__pycache__
-order/__pycache__
+**/__pycache__/
+# mysite/__pycache__
+# order/__pycache__

@@ -28,10 +28,15 @@ class Product(models.Model):
 
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    products = models.ManyToManyField(Product, through='OrderItem')
+    order_date = models.DateTimeField()
+
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     price = models.IntegerField()
     quantity = models.IntegerField()
-    order_date = models.DateTimeField(auto_now=True)
 
 
 class OrderStatus(models.Model):

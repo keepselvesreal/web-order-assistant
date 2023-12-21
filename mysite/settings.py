@@ -12,11 +12,13 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 from environ import Env
+import os # 추가
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-env = Env()
+env = Env() # 추가
+# ts 추가
 env_path = BASE_DIR / '.env'
 if env_path.is_file():
     with env_path.open() as f:
@@ -46,6 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'widget_tweaks', # 추가
 ]
 
 MIDDLEWARE = [
@@ -63,7 +66,7 @@ ROOT_URLCONF = 'mysite.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'mysite/templates')], # 추가
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -79,7 +82,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'mysite.wsgi.application'
 ASGI_APPLICATION = 'mysite.asgi.application' # 추가
 
-CHANNEL_LAYERS = {
+CHANNEL_LAYERS = { # 추가
     'default': {
         'BACKEND': 'channels.layers.InMemoryChannelLayer'
     }
@@ -125,13 +128,19 @@ TIME_ZONE = 'Asia/Seoul' # 추가
 
 USE_I18N = True
 
-USE_TZ = True
+# USE_TZ = True
+# USE_TZ = False # 추가
+USE_TZ = True # 시간 저장 오류로 인해 일단 다시 초기화
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'mysite/static')] # 추가
+
+LOGIN_REDIRECT_URL = '/' # 추가
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

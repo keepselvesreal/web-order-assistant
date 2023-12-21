@@ -1,8 +1,10 @@
 import json
 from channels.generic.websocket import JsonWebsocketConsumer
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import User
 
 from .order_manager import OrderManager
+from .chains import response_chain
+from .models import ChatMessage
 
 
 class ChatConsumer(JsonWebsocketConsumer):
@@ -13,36 +15,56 @@ class ChatConsumer(JsonWebsocketConsumer):
         pass
 
     def receive_json(self, chat_data, **kwargs):
-        message = chat_data['message']
-        print(message)
+        user = chat_data["user"]
+        user_message = chat_data["message"]
+        message_time = chat_data["date"]
+        print(user_message)
+        print(message_time)
         
-        self.save_message(message)
-        # todo: 모델 답변 생성
-        # todo: 일반 문의와 주문 관련 요청 경우로 나눠 처리
-        # 주문 관련 요청 경우 dummy data 기반 구현
-        ## order_data에 대한 dummy data 생성
-        order_data = {
-            'user': 'nadle',
-            'request_type': 'order_change',
-            'products': [
-                {'name': '커피', 'price': 1000, 'quantity': 1},
-                {'name': '케이크', 'price': 5000, 'quantity': 1},
-            ],
-            'order_date': '2023-12-15T12:14:38+09:00',
-        }
+        message_history = self.load_messages()
+        print("message_history: ", message_history)
+        # merged_message = message_history + f"\nHumanMessage: {user_message}"
+        print("user_message: ", user_message)
         
-        order_manager = OrderManager(order_data)
-        response_message = order_manager.process_request()
+        # print("merged_message: ", merged_message)
+        pydantic_response = response_chain.invoke({"user": user, 
+                                                   "message_history": message_history, 
+                                                   "user_message": user_message,
+                                                   "message_time": message_time})
+        print(pydantic_response)
+        response_type = pydantic_response.response_type
+        model_response = pydantic_response.response
+        
+        if response_type == "response_to_request":
+            order_manager = OrderManager(pydantic_response)
+            model_response = order_manager.process_request()
+        
         self.send_json(
             {'type': 'assistant-message',
-             'message': response_message}
+            'response_to_request': True,
+            'message': model_response}
             )
-
-            
+        
+        self.save_messages(user, user_message, model_response, message_time)
+        
         # self.send_json(
         #     {'type': 'assistant-message',
         #      "message": "하드 코딩 메시지"}
         # )
         
-    def save_message(self, message):
-        print('데이터 저장 완료!')
+    def save_messages(self, user, user_message, model_response, message_time):
+        # print('데이터 저장 완료!')
+        print("save_message 진입")
+        user = User.objects.get(username=user)
+        ChatMessage.objects.create(user=user, 
+                                   user_message=user_message, 
+                                   gpt_response=model_response,
+                                   message_time=message_time)
+        
+    
+    def load_messages(self):
+        messages = ChatMessage.objects.all()
+        message_history = ""
+        for message in messages:
+            message_history += f"HumanMessage: {message.user_message}\nAIResponse: {message.gpt_response}\n"
+        return message_history

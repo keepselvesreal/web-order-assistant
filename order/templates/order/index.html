@@ -1,18 +1,23 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>주문 페이지</title>
-</head>
-<body>
-    <h3>주문봇</h3>
-    <div id="chat-box"></div>
-    <input type="text" id="chat-message-input" placeholder="메시지를 입력하세요">
-    <button type="submit" id="send-button">입력</button>
+{% extends "base.html" %}
 
-    <script>
-        const chatBox = document.getElementById('chat-box');
+{% block title %}주문 페이지{% endblock %}
+
+{% block content %}
+
+<h3>주문봇</h3>
+<div id="chat-box" style="padding-bottom: 60px; overflow-y: auto; height: calc(100vh - 160px);"></div>
+<div id="chat-form" style="position: fixed; bottom: 0; left: 0; width: 100%; padding: 10px; background: white; border-top: 1px solid #ccc;">
+    <input type="text" id="chat-message-input" placeholder="메시지를 입력하세요" style="width: calc(100% - 120px);">
+    <button type="submit" id="send-button" style="width: 100px;">입력</button>
+</div>
+
+{% endblock %}
+
+
+{% block extra-script %}
+
+<script>
+    const chatBox = document.getElementById('chat-box');
         const chatInput = document.getElementById('chat-message-input');
 
         const ws = new WebSocket(`ws://${window.location.host}/ws/chat/`);
@@ -20,10 +25,15 @@
         ws.onclose = function(e) { console.log("웹소켓과 서버와의 연결이 끊어졌습니다."); };
         ws.onerror = function(e) { console.error("웹소켓과 서버와의 연결 중에 오류가 발생했습니다.", e); };
         
+        const loggedInUser = "{{ user.username }}";
+
         function sendMessage() {
             const message = chatInput.value;
-            chatBox.innerHTML += `<div>${message}</div>`; // 사용자가 입력한 메시지를 채팅창에 추가
-            ws.send(JSON.stringify({'message': message})); // 메시지를 JSON 형태로 서버에 전송
+            const currentTime = new Date(); // 현재 시간을 얻기
+            console.log(currentTime)
+            // const currentTime = new Date().toLocaleString('ko-KR'); // 한국 현재 시간
+            chatBox.innerHTML += `<div class="chat-message"><div>${message}</div><div>${currentTime}</div></div>`; // 사용자가 입력한 메시지와 현재 시간을 오른쪽 정렬로 채팅창에 추가
+            ws.send(JSON.stringify({"user": loggedInUser, "message": message, "date": currentTime})); // 메시지를 JSON 형태로 서버에 전송
             chatInput.value = ''; // 입력창을 비움
         }
     
@@ -43,6 +53,32 @@
             const data = JSON.parse(e.data);
             chatBox.innerHTML += `<div>${data.message}</div>`; // 서버로부터 받은 메시지를 채팅창에 표시
         };
-    </script>
-</body>
-</html>
+  // 새 메시지가 채팅 창에 추가될 때마다 이 함수를 호출해야 합니다.
+    function updateScroll(){
+        var bottom = chatBox.scrollHeight - chatBox.clientHeight;
+        chatBox.scrollTop = bottom;
+    }
+
+    // MutationObserver는 DOM의 변화를 감지하는 데 사용할 수 있습니다.
+    // 'container'는 메시지들이 추가되는 컨테이너의 id 혹은 클래스명으로 바꿔야 합니다.
+    var container = document.querySelector('#chat-box'); // 메시지가 추가되는 컨테이너를 가리킵니다.
+
+    // Observer 인스턴스를 생성합니다.
+    var observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if(mutation.addedNodes.length) {
+                updateScroll(); // DOM에 노드가 추가될 때 스크롤을 업데이트합니다.
+            }
+        });
+    });
+
+    // Observer를 설정하고, 위에서 정의한 컨테이너에 대한 변화를 관찰합니다.
+    observer.observe(container, { childList: true });
+
+    // 페이지 로딩 시 바로 스크롤을 하단으로 이동시킵니다.
+    window.onload = updateScroll;
+</script>
+
+{% endblock %}
+
+
